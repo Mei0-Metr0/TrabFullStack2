@@ -6,7 +6,7 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     name: '',
-    type: 0,
+    type: 1,
     picture: null
   });
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -64,8 +64,10 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
       const result = await response.json();
       dispatch(addPokemon(result));
       onClose();
-      setFormData({ name: '', type: 0, picture: null });
+      setFormData({ name: '', type: 1, picture: null });
       setPreviewUrl(null);
+      // Refresh the page
+      window.location.reload();
     } catch (err) {
       setError(err.message);
     }
@@ -105,7 +107,7 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
                   required
                 >
                   {pokemonTypes.map((type, index) => (
-                    <option key={type} value={index}>
+                    <option key={type} value={index + 1}>
                       {type.charAt(0).toUpperCase() + type.slice(1)}
                     </option>
                   ))}

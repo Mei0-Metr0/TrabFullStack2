@@ -76,6 +76,11 @@ function PokemonGallery() {
       return matchesSearch;
     }
 
+    // For custom Pokemon, directly check the type property
+    if (pokemon.isCustom) {
+      return matchesSearch && pokemon.type === selectedType;
+    }
+
     // Verifica se o Pokemon está na lista filtrada por tipo
     return matchesSearch && typeFilteredPokemon.some(
       typePokemon => typePokemon.pokemon.url.endsWith(`/${pokemon.number}/`)

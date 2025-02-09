@@ -19,16 +19,16 @@ const gallerySlice = createSlice({
   name: "gallery",
   initialState: {
     allPokemonNames: [],
-    customPokemon: [], // Add this to store custom Pokemon
+    //customPokemon: [], // Add this to store custom Pokemon
     status: "idle", // idle, pending, fulfilled, rejected
     error: null,
   },
   reducers: {
     // Add the addPokemon reducer
     addPokemon: (state, action) => {
-      state.customPokemon.push(action.payload);
+      //state.customPokemon.push(action.payload);
       // Add the new Pokemon name to allPokemonNames as well
-      state.allPokemonNames.push(action.payload.name);
+      //state.allPokemonNames.push(action.payload.name);
     }
   },
   // Gerenciamento de mudanças de estado
