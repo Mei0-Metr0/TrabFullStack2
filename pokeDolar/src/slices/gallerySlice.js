@@ -1,5 +1,3 @@
-// Arquivo para gerenciar a slice de galeria
-
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { fetchPokemonList } from "../services/apiService";
 
@@ -21,10 +19,18 @@ const gallerySlice = createSlice({
   name: "gallery",
   initialState: {
     allPokemonNames: [],
+    customPokemon: [], // Add this to store custom Pokemon
     status: "idle", // idle, pending, fulfilled, rejected
     error: null,
   },
-  reducers: {},
+  reducers: {
+    // Add the addPokemon reducer
+    addPokemon: (state, action) => {
+      state.customPokemon.push(action.payload);
+      // Add the new Pokemon name to allPokemonNames as well
+      state.allPokemonNames.push(action.payload.name);
+    }
+  },
   // Gerenciamento de mudanças de estado
   extraReducers: (builder) => {
     builder
@@ -43,5 +49,8 @@ const gallerySlice = createSlice({
       });
   },
 });
+
+// Export the action
+export const { addPokemon } = gallerySlice.actions;
 
 export default gallerySlice.reducer;

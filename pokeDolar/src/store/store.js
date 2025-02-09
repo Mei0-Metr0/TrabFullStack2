@@ -6,6 +6,7 @@ import galleryReducer from "../slices/gallerySlice";
 import paginationReducer from "../slices/paginationSlice";
 import dollarPokemonReducer from "../slices/dollarPokemonSlice";
 import filterReducer from "../slices/filterSlice";
+import customPokemonReducer from '../slices/customPokemonSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,5 +15,6 @@ export const store = configureStore({
     pagination: paginationReducer,
     dollarPokemon: dollarPokemonReducer,
     filter: filterReducer,
+    customPokemon: customPokemonReducer,
   },
 });

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAllPokemonNames } from "../slices/gallerySlice";
+import { fetchCustomPokemon } from "../slices/customPokemonSlice";
 import { setTotalPages } from "../slices/paginationSlice";
 import { setPokemonTypes } from "../slices/filterSlice";
 import { capitalize } from "../utils/stringUtils";
@@ -11,20 +12,23 @@ import Pagination from "./Pagination";
 import SearchBar from "./SearchBar";
 import PokemonTypeFilter from "./PokemonTypeFilter";
 import { fetchPokemonByType } from "../services/apiService";
-import PendingState from "./PendingState"
-import RejectState from "./RejectState"
+import PendingState from "./PendingState";
+import RejectState from "./RejectState";
+
 
 function PokemonGallery() {
   const dispatch = useDispatch();
   const { allPokemonNames, status, error } = useSelector((state) => state.gallery);
+  const { pokemon: customPokemon } = useSelector((state) => state.customPokemon);
   const { currentPage, limit } = useSelector((state) => state.pagination);
   const { searchQuery, selectedType, typeFilteredPokemon } = useSelector((state) => state.filter);
 
-  // Obtem todos os Pokemons de início
+  // Fetch both API and custom Pokemon
   useEffect(() => {
     if (allPokemonNames.length === 0) {
       dispatch(fetchAllPokemonNames());
     }
+    dispatch(fetchCustomPokemon());
   }, [dispatch, allPokemonNames]);
 
   // Obtem Pokemons do tipo selecionado
@@ -48,10 +52,18 @@ function PokemonGallery() {
   }, [dispatch, selectedType]);
 
   // Array com Pokemons e seus números
-  const pokemonWithNumbers = allPokemonNames.map((name, index) => ({
-    name,
-    number: index + 1
-  }));
+  // Combine API and custom Pokemon
+  const pokemonWithNumbers = [
+    ...allPokemonNames.map((name, index) => ({
+      name,
+      number: index + 1,
+      isCustom: false
+    })),
+    ...customPokemon.map(pokemon => ({
+      ...pokemon,
+      isCustom: true
+    }))
+  ];
 
   // Filtro baseado na busca e no tipo
   const filteredPokemon = pokemonWithNumbers.filter(pokemon => {
@@ -99,13 +111,17 @@ function PokemonGallery() {
           <p>No Pokemon found</p>
         ) : (
           paginatedPokemon.map((pokemon) => {
-            const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.number}.png`;
+            const imageUrl = pokemon.isCustom
+              ? `/api/pokemon/${pokemon._id}/picture`
+              : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.number}.png`;
+            
             return (
               <PokemonCard
-                key={pokemon.number}
+                key={pokemon.isCustom ? `custom-${pokemon._id}` : pokemon.number}
                 name={capitalize(pokemon.name)}
                 imageUrl={imageUrl}
                 number={pokemon.number}
+                isCustom={pokemon.isCustom}
               />
             );
           })
