@@ -7,6 +7,7 @@ import multer from 'multer';
 import connectDB from './src/config/db.js';
 import User from './src/models/User.js';
 import Pokemon from './src/models/Pokemon.js';
+import cacheService from './src/config/cache.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
@@ -120,7 +121,6 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
       return res.status(400).json({ message: 'Picture is required' });
     }
 
-    // Get the current count of Pokemon to determine the next number
     const count = await Pokemon.countDocuments();
     const nextNumber = 1026 + count;
 
@@ -133,7 +133,9 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
 
     await pokemon.save();
     
-    // Return the created Pokemon without the binary picture data
+    // Invalidate the custom pokemon list cache after creating a new pokemon
+    cacheService.del('custom_pokemon_list');
+    
     const response = {
       _id: pokemon._id,
       name: pokemon.name,
@@ -151,11 +153,18 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
 // Add this with your other Pokemon routes
 app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
   try {
-    const customPokemon = await Pokemon.find({}, {
-      name: 1,
-      number: 1,
-      type: 1
-    });
+    const customPokemon = await cacheService.getOrSet(
+      'custom_pokemon_list',
+      async () => {
+        const pokemon = await Pokemon.find({}, {
+          name: 1,
+          number: 1,
+          type: 1
+        });
+        return pokemon;
+      },
+      1800 // Cache for 30 minutes
+    );
     res.json(customPokemon);
   } catch (error) {
     console.error('Error fetching custom Pokemon:', error);
@@ -166,14 +175,26 @@ app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
 // Add this route to get a specific Pokemon's picture
 app.get('/api/pokemon/:id/picture', authMiddleware, async (req, res) => {
   try {
-    const pokemon = await Pokemon.findById(req.params.id);
-    if (!pokemon || !pokemon.picture) {
-      return res.status(404).json({ message: 'Pokemon picture not found' });
-    }
+    const cacheKey = `pokemon_picture_${req.params.id}`;
+    const pokemonPicture = await cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const pokemon = await Pokemon.findById(req.params.id);
+        if (!pokemon || !pokemon.picture) {
+          throw new Error('Pokemon picture not found');
+        }
+        return pokemon.picture;
+      },
+      3600 // Cache for 1 hour
+    );
+    
     res.set('Content-Type', 'image/jpeg');
-    res.send(pokemon.picture);
+    res.send(pokemonPicture);
   } catch (error) {
     console.error('Error fetching Pokemon picture:', error);
+    if (error.message === 'Pokemon picture not found') {
+      return res.status(404).json({ message: 'Pokemon picture not found' });
+    }
     res.status(500).json({ message: 'Error fetching Pokemon picture' });
   }
 });
