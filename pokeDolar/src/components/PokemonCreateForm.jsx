@@ -11,6 +11,7 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
   });
   const [previewUrl, setPreviewUrl] = useState(null);
   const [error, setError] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const pokemonTypes = [
     "normal", "fighting", "flying", "poison", "ground",
@@ -19,8 +20,25 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
     "dark", "fairy"
   ];
 
+  const validateName = (name) => {
+    const validPattern = /^[a-zA-Z0-9-]*$/;
+    
+    if (!validPattern.test(name)) {
+      const invalidChars = name.match(/[^a-zA-Z0-9-]/g);
+      const uniqueInvalidChars = [...new Set(invalidChars)].join(" ");
+      setNameError(`Invalid characters: ${uniqueInvalidChars}`);
+      return false;
+    }
+    
+    setNameError('');
+    return true;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'name') {
+      validateName(value);
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -45,6 +63,10 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!validateName(formData.name)) {
+      return;
+    }
 
     try {
       const formDataToSend = new FormData();
@@ -75,6 +97,9 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // Check if form is valid (including name validation)
+  const isFormValid = formData.name && formData.picture && !nameError;
+
   return (
     <div className="modal d-block" tabIndex="-1" role="dialog" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className="modal-dialog" role="document">
@@ -90,12 +115,17 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
                 <label className="form-label">Name</label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${nameError ? 'border-2 border-danger' : ''}`}
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   required
                 />
+                {nameError && (
+                  <div className="text-danger mt-1 small">
+                    {nameError}
+                  </div>
+                )}
               </div>
               <div className="mb-3">
                 <label className="form-label">Type</label>
@@ -135,7 +165,11 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
                 <button type="button" className="btn btn-secondary" onClick={onClose}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={!isFormValid}
+                >
                   Create Pokemon
                 </button>
               </div>
