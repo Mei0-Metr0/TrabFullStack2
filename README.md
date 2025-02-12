@@ -182,30 +182,13 @@ A aplicação será estruturada em 3 camadas principais:
 
 - **Front-end**: Desenvolvido em React.js, funcionando como uma Single-Page Application (SPA), interagindo com o Back-end via requisições HTTP.
 - **Back-end HTTP**: Implementado com Express.js, seguindo padrões RESTful para comunicação com o Front-end e acesso direto ao banco de dados.
-- **Banco de Dados**: Pode ser utilizado qualquer SGBD.
+- **Banco de Dados**: Foi utilizada a ferramenta NoSQL MongoDB, com todos os dados do sistema sendo armazenados em três collections (`users`, `sessions` e `pokemons`).
 
 ## Tecnologias Utilizadas
 - **Front-end**: React.js, Axios
 - **Back-end**: Node.js, Express.js
 - **Banco de Dados**: MongoDB Atlas
 - **Segurança**: HTTPS, bcrypt para hashing de senhas, sanitização de entrada
-
-## Critérios de Avaliação
-- Implementação de Login, Busca e Inserção no Front-end com React.js
-- Implementação de Login, Busca e Inserção no Back-end com Express.js
-- Validação de entradas no servidor
-- Envio de mensagens de erro adequadas
-- Implementação do padrão REST na API
-- Regras de segurança:
-  - Uso de HTTPS e hashing de senhas
-  - Proteção contra SQL/NoSQL Injection e XSS
-  - Controle de sessões e expiração de tokens
-  - Registro de logs para autenticação, buscas e inserções
-- Otimização do Front-end:
-  - Compressão de arquivos estáticos
-  - Compressão de respostas do servidor
-- Implementação de cache no Back-end
-- Configuração de pool de conexões no banco de dados
 
 ## 🔧 Configuração e Execução do Projeto
 
@@ -218,11 +201,39 @@ cd <pasta>
 
 Em seguida, será preciso abrir o projeto, por exemplo por uma IDE como o [VSCode](https://code.visualstudio.com/), e acessar a pasta `pokeDolar` por terminal de comando.
 
+Será necessário instalar a versão mais recente do Node.js para executar os comandos com sucesso (sem a versão mais recente do Node.js, pode ocorrer um erro de conexão ao Banco de Dados, informando que é necessário permitir a conexão na lista de IPs, mesmo com a configuração correta da permissão).
+
 Execute o seguinte comando para instalar as dependências da aplicação:
 
 `npm install`
 
-Após a instalação das dependências, execute o comando abaixo para que a aplicação rode localmente:
+A conexão com o Banco de Dados é feita com base em um arquivo `.env`, que deve ser criado dentro da pasta `pokeDolar`. O arquivo deve seguir o `.env.example`, com os seguintes campos:
+
+```
+DB_CLUSTER=
+DB_USERNAME=
+DB_PASSWORD=
+APPNAME=
+SECRET=
+EXPIRE=
+NODE_ENV=
+PORT=
+```
+
+Sendo:
+
+- `DB_CLUSTER`: Cluster do projeto criado no MongoDB;
+- `DB_USERNAME`: Nome de usuário no MongoDB;
+- `DB_PASSWORD`: Senha de acesso aos dados do MongoDB;
+- `APPNAME`: O nome do aplicativo sendo executado;
+- `SECRET`: Chave secreta para criptografia;
+- `EXPIRE`: Tempo em segundos até o token de login expirar;
+- `NODE_ENV`: Ambiente node;
+- `PORT`: Porta em que o Back-End será executado.
+
+Os dados para preencher os campos `DB_...` podem ser encontrados no projeto MongoDB criado para armazenar os dados. Também deve-se liberar acesso do IP sendo utilizado no console do MongoDB.
+
+Após a instalação das dependências e configuração do Banco de Dados, execute os comando abaixo para que a aplicação rode localmente:
 
 ### Back-end
 ```bash
@@ -233,17 +244,3 @@ node server.js
 ```bash
 `npm run dev`
 ```
-
-### 5. Configuração do MongoDB Atlas
-
-Para uma execução adequada do banco de dados MongoDB Atlas, siga os passos abaixo:
-
-1. Instale a versão mais recente do Node.js (v22).
-2. Reinicie o terminal do VS Code fechando e reabrindo o editor.
-3. Exclua o arquivo `package-lock.json` e a pasta `node_modules`, depois execute o comando:
-
-```bash
-npm install
-```
-
-Sem a versão mais recente do Node.js, pode ocorrer um erro de conexão informando que é necessário permitir a conexão na lista de IPs, mesmo com a configuração correta da permissão.
