@@ -31,7 +31,10 @@ const gallerySlice = createSlice({
   },
 
   // Reducers síncronos
-  reducers: {},
+  reducers: {
+    // Reducer para adicionar um novo Pokemon
+    addPokemon: (state, action) => {}
+  },
 
   // Reducers para ações assíncronas
   extraReducers: (builder) => {
