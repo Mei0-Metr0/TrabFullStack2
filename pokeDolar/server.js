@@ -11,17 +11,21 @@ import cacheService from './src/config/cache.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
+// Carrega variáveis de ambiente
 dotenv.config();
+
 const app = express();
 
+// Conecta ao banco de dados
 connectDB();
 
+// Configura armazenamento de sessões no MongoDB
 const sessionStore = MongoStore.create({
   mongoUrl: `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_CLUSTER}.mongodb.net/${process.env.APPNAME}`,
   collectionName: 'sessions'
 });
 
-// Configure multer for handling file uploads
+// Configura multer para upload de arquivos
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
@@ -30,7 +34,9 @@ const upload = multer({
   }
 });
 
+// Middlewares
 app.use(express.json());
+// Configuração de sessões
 app.use(session({
   secret: process.env.SECRET,
   resave: false,
@@ -42,13 +48,13 @@ app.use(session({
   }
 }));
 
-// Add this after your app declaration but before your routes
+// Configuração CORS
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite's default port
-  credentials: true // This is important for sessions to work
+  origin: 'http://localhost:5173', 
+  credentials: true // Importante para sessões
 }));
 
-// Auth middleware
+// Middleware de autenticação
 const authMiddleware = (req, res, next) => {
   if (!req.session.user) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -56,34 +62,22 @@ const authMiddleware = (req, res, next) => {
   next();
 };
 
-// Auth routes
+// Rota de login
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Retrieve all users in the User collection
+    // Busca todos os usuários
     const allUsers = await User.find();
-    //console.log("All users in the collection:");
-    // allUsers.forEach(user => console.log(user));
-
-    // Check if there is a match for username and password
     let authenticatedUser = null;
 
-    //console.log(username);
-    //let cryptUsername = await bcrypt.hash(username, 10);
-    //console.log(cryptUsername);
-
-    //console.log(password);
-    //let cryptPassword = await bcrypt.hash(password, 10);
-    //console.log(cryptPassword);
-
+    // Verifica credenciais
     for (const user of allUsers) {
-      //console.log(user);
       const usernameMatch = await bcrypt.compare(username, user.username);
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (usernameMatch && passwordMatch) {
         authenticatedUser = user;
-        break; // Exit the loop if a match is found
+        break; 
       }
     }
 
@@ -92,7 +86,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Authentication successful
+    // Cria sessão
     req.session.user = { username: authenticatedUser.username };
     console.log(`User authenticated: ${authenticatedUser.username}`);
     res.json({ success: true });
@@ -102,28 +96,32 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Rota de logout
 app.post('/api/logout', (req, res) => {
   req.session.destroy();
   res.json({ success: true });
 });
 
+// Rota para verificar autenticação
 app.get('/api/check-auth', (req, res) => {
   res.json({ isAuthenticated: !!req.session.user });
 });
 
-// Protect API routes
+// Protege rotas da API
 app.use('/api/pokemon', authMiddleware);
 
-// Pokemon routes
+// Rota para criar Pokemon
 app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Picture is required' });
     }
 
+    // Gera número sequencial para novo Pokemon
     const count = await Pokemon.countDocuments();
     const nextNumber = 1026 + count;
 
+    // Cria novo Pokemon
     const pokemon = new Pokemon({
       name: req.body.name,
       number: nextNumber,
@@ -133,9 +131,10 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
 
     await pokemon.save();
     
-    // Invalidate the custom pokemon list cache after creating a new pokemon
+    // Invalida cache
     cacheService.del('custom_pokemon_list');
     
+     // Prepara resposta
     const response = {
       _id: pokemon._id,
       name: pokemon.name,
@@ -150,7 +149,7 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
   }
 });
 
-// Add this with your other Pokemon routes
+// Rota para listar Pokemon personalizados
 app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
   try {
     const customPokemon = await cacheService.getOrSet(
@@ -163,7 +162,7 @@ app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
         });
         return pokemon;
       },
-      1800 // Cache for 30 minutes
+      1800 // Cache por 30 minutos
     );
     res.json(customPokemon);
   } catch (error) {
@@ -172,7 +171,7 @@ app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
   }
 });
 
-// Add this route to get a specific Pokemon's picture
+// Rota para buscar imagem do Pokemon
 app.get('/api/pokemon/:id/picture', authMiddleware, async (req, res) => {
   try {
     const cacheKey = `pokemon_picture_${req.params.id}`;
@@ -185,7 +184,7 @@ app.get('/api/pokemon/:id/picture', authMiddleware, async (req, res) => {
         }
         return pokemon.picture;
       },
-      3600 // Cache for 1 hour
+      3600 // Cache por 1 hora
     );
     
     res.set('Content-Type', 'image/jpeg');
@@ -199,7 +198,7 @@ app.get('/api/pokemon/:id/picture', authMiddleware, async (req, res) => {
   }
 });
 
-// Serve static files in production
+// Configuração para produção
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'dist')));
   app.get('*', (req, res) => {
@@ -207,5 +206,6 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Inicia servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
