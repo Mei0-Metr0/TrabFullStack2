@@ -3,10 +3,14 @@ import { fetchPokemonList } from "../services/apiService";
 
 // Obtém todos os nomes de pokemons da API
 export const fetchAllPokemonNames = createAsyncThunk(
+  // Nome da ação
   "gallery/fetchAllPokemonNames",
   async (_, { rejectWithValue }) => {
     try {
+      // Busca a lista de todos os Pokémon da API, limitando a 1025 entradas
       const allPokemon = await fetchPokemonList(0, 1025);
+
+      // Retorna apenas os nomes dos Pokémon
       return allPokemon.map((pokemon) => pokemon.name);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -14,43 +18,43 @@ export const fetchAllPokemonNames = createAsyncThunk(
   }
 );
 
-// Cria a slice de galeria
+// Cria a slice para gerenciar a galeria de Pokémon
 const gallerySlice = createSlice({
+  // Nome do slice
   name: "gallery",
+
+  // Estado inicial
   initialState: {
-    allPokemonNames: [],
-    //customPokemon: [], // Add this to store custom Pokemon
-    status: "idle", // idle, pending, fulfilled, rejected
-    error: null,
+    allPokemonNames: [], // Lista com os nomes de todos os Pokémon
+    status: "idle", // Estado da requisição: idle (inativo), pending (carregando), fulfilled (sucesso), rejected (falha)
+    error: null, // Armazena erros em caso de falha na requisição
   },
-  reducers: {
-    // Add the addPokemon reducer
-    addPokemon: (state, action) => {
-      //state.customPokemon.push(action.payload);
-      // Add the new Pokemon name to allPokemonNames as well
-      //state.allPokemonNames.push(action.payload.name);
-    }
-  },
-  // Gerenciamento de mudanças de estado
+
+  // Reducers síncronos
+  reducers: {},
+
+  // Reducers para ações assíncronas
   extraReducers: (builder) => {
     builder
+      // Quando a requisição está pendente
       .addCase(fetchAllPokemonNames.pending, (state) => {
         state.status = "pending";
         state.error = null;
       })
+      // Quando a requisição é concluída com sucesso
       .addCase(fetchAllPokemonNames.fulfilled, (state, action) => {
         state.status = "fulfilled";
         state.allPokemonNames = action.payload;
         state.error = null;
       })
+      // Quando a requisição falha
       .addCase(fetchAllPokemonNames.rejected, (state, action) => {
         state.status = "rejected";
-        state.error = action.payload;
+        state.error = action.payload; // Armazena a mensagem de erro
       });
   },
 });
 
-// Export the action
 export const { addPokemon } = gallerySlice.actions;
 
 export default gallerySlice.reducer;
