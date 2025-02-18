@@ -10,11 +10,29 @@ import Pokemon from './src/models/Pokemon.js';
 import cacheService from './src/config/cache.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import compression from 'compression';
 
 // Carrega variáveis de ambiente
 dotenv.config();
 
 const app = express();
+
+// Determinar quais requisições devem ser comprimidas
+const shouldCompress = (req, res) => {
+  // Não comprimir se o cliente especificar que não quer compressão
+  if (req.headers['x-no-compression']) {
+    return false;
+  }
+  // Usar a função padrão de compressão do middleware
+  return compression.filter(req, res);
+};
+
+// Aplica compressão com configurações personalizadas
+app.use(compression({
+  filter: shouldCompress,
+  level: 9, // Nível de compressão (0-9, sendo 9 o máximo)
+  threshold: 100 * 1024, // Comprimir apenas respostas maiores que 100kb
+}));
 
 // Conecta ao banco de dados
 connectDB();
@@ -36,6 +54,7 @@ const upload = multer({
 
 // Middlewares
 app.use(express.json());
+
 // Configuração de sessões
 app.use(session({
   secret: process.env.SECRET,
