@@ -11,11 +11,15 @@ import cacheService from './src/config/cache.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import compression from 'compression';
+import { logger, requestLogger, errorLogger, logAuthEvent } from './src/config/logger.js';
 
 // Carrega variáveis de ambiente
 dotenv.config();
 
 const app = express();
+
+// Adiciona middleware de logging para todas as requisições
+app.use(requestLogger);
 
 // Determinar quais requisições devem ser comprimidas
 const shouldCompress = (req, res) => {
@@ -81,7 +85,7 @@ const authMiddleware = (req, res, next) => {
   next();
 };
 
-// Rota de login
+// Rota de login com logging
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -96,21 +100,22 @@ app.post('/api/login', async (req, res) => {
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (usernameMatch && passwordMatch) {
         authenticatedUser = user;
-        break; 
+        break;
       }
     }
 
     if (!authenticatedUser) {
-      console.log("Invalid credentials");
+      logAuthEvent(username, false, 'Invalid credentials');
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // Cria sessão
     req.session.user = { username: authenticatedUser.username };
-    console.log(`User authenticated: ${authenticatedUser.username}`);
+    logAuthEvent(authenticatedUser.username, true);
     res.json({ success: true });
+
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error', { error });
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -163,7 +168,7 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
 
     res.status(201).json(response);
   } catch (error) {
-    console.error('Error creating Pokemon:', error);
+    logger.error('Error creating Pokemon:', error);
     res.status(500).json({ message: 'Error creating Pokemon' });
   }
 });
@@ -185,7 +190,7 @@ app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
     );
     res.json(customPokemon);
   } catch (error) {
-    console.error('Error fetching custom Pokemon:', error);
+    logger.error('Error fetching custom Pokemon:', error);
     res.status(500).json({ message: 'Error fetching custom Pokemon' });
   }
 });
@@ -209,7 +214,7 @@ app.get('/api/pokemon/:id/picture', authMiddleware, async (req, res) => {
     res.set('Content-Type', 'image/jpeg');
     res.send(pokemonPicture);
   } catch (error) {
-    console.error('Error fetching Pokemon picture:', error);
+    logger.error('Error fetching Pokemon picture:', error);
     if (error.message === 'Pokemon picture not found') {
       return res.status(404).json({ message: 'Pokemon picture not found' });
     }
@@ -224,6 +229,9 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 }
+
+// Middleware de logging de erros
+app.use(errorLogger);
 
 // Inicia servidor
 const PORT = process.env.PORT || 3000;
