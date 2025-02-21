@@ -63,35 +63,41 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
+  
     if (!validateName(formData.name)) {
       return;
     }
-
+  
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
       formDataToSend.append('type', formData.type);
       formDataToSend.append('picture', formData.picture);
-
+  
       const response = await fetch('/api/pokemon/create', {
         method: 'POST',
         body: formDataToSend,
       });
-
+  
+      const data = await response.json();
+  
       if (!response.ok) {
-        throw new Error('Failed to create Pokemon');
+        // Verifica se há erros de validação
+        if (data.errors && data.errors.length > 0) {
+          setError(data.errors[0].msg); // Exibe apenas o primeiro erro
+        } else {
+          setError(data.message || 'Erro desconhecido');
+        }
+        return;
       }
-
-      const result = await response.json();
-      dispatch(addPokemon(result));
+  
+      dispatch(addPokemon(data));
       onClose();
       setFormData({ name: '', type: 1, picture: null });
       setPreviewUrl(null);
-      // Refresh the page
       window.location.reload();
     } catch (err) {
-      setError(err.message);
+      setError('Erro ao enviar requisição');
     }
   };
 

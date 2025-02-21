@@ -14,10 +14,20 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { logger, requestLogger, errorLogger, logAuthEvent } from './src/config/logger.js';
 
+import { body, validationResult } from 'express-validator'; // Validação de entradas
+import xss from 'xss-clean'; // Proteção contra XSS
+import mongoSanitize from 'express-mongo-sanitize'; // Proteção contra NoSQL Injection
+
 // Carrega variáveis de ambiente
 dotenv.config();
 
 const app = express();
+
+// Middleware para proteção contra NoSQL Injection
+app.use(mongoSanitize());
+
+// Middleware para proteção contra XSS
+app.use(xss());
 
 // Aplica RateLimiter
 const limiter = rateLimit({
@@ -108,7 +118,31 @@ const authMiddleware = (req, res, next) => {
 };
 
 // Rota de login com logging
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', [
+  // Validações para o campo username
+  body('username')
+    .trim()
+    .notEmpty().withMessage('O nome de usuário é obrigatório')
+    .isLength({ min: 3, max: 30 }).withMessage('O usuário deve ter entre 3 e 30 caracteres')
+    .escape(),
+  
+  // Validações para o campo password
+  body('password')
+    .trim()
+    .notEmpty().withMessage('A senha é obrigatória')
+    .isLength({ min: 6 }).withMessage('A senha deve ter pelo menos 6 caracteres')
+    .escape()
+], async (req, res) => {
+  
+  // Verifica se há erros de validação
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      success: false,
+      errors: errors.array() 
+    });
+  }
+
   try {
     const { username, password } = req.body;
 
@@ -126,19 +160,45 @@ app.post('/api/login', async (req, res) => {
       }
     }
 
+    // Se não encontrou usuário válido
     if (!authenticatedUser) {
-      logAuthEvent(username, false, 'Invalid credentials');
-      return res.status(401).json({ message: 'Invalid credentials' });
+      logAuthEvent(username, false, 'Credenciais inválidas');
+      return res.status(401).json({ 
+        success: false,
+        message: 'Nome de usuário ou senha incorretos' 
+      });
     }
 
     // Cria sessão
-    req.session.user = { username: authenticatedUser.username };
+    req.session.user = { 
+      username: authenticatedUser.username,
+      id: authenticatedUser._id
+    };
+    
+    // Registra evento de login bem-sucedido
     logAuthEvent(authenticatedUser.username, true);
-    res.json({ success: true });
+    
+    // Retorna sucesso
+    res.json({ 
+      success: true,
+      message: 'Login realizado com sucesso',
+      user: {
+        username: authenticatedUser.username
+      }
+    });
 
   } catch (error) {
-    logger.error('Login error', { error });
-    res.status(500).json({ message: 'Server error' });
+    // Registra erro no servidor
+    logger.error('Erro durante o login', { 
+      error: error.message,
+      stack: error.stack
+    });
+    
+    // Retorna erro para o cliente
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro ao processar o login. Tente novamente mais tarde.'
+    });
   }
 });
 
@@ -157,10 +217,33 @@ app.get('/api/check-auth', (req, res) => {
 app.use('/api/pokemon', authMiddleware);
 
 // Rota para criar Pokemon
-app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
+// O middleware de upload de imagens deve vim antes da de validação
+app.post('/api/pokemon/create', upload.single('picture'), [
+  // Validações
+  body('name')
+    .trim()
+    .notEmpty().withMessage('O nome do Pokémon é obrigatório')
+    .isLength({ min: 3, max: 30 }).withMessage('O nome deve ter entre 3 e 30 caracteres')
+    .escape(),
+  body('type')
+    .isInt({ min: 0, max: 18 }).withMessage('Tipo do Pokémon inválido')
+], async (req, res) => {
   try {
+
+    // Verifica erros de validação
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false,
+        errors: errors.array() 
+      });
+    }
+
     if (!req.file) {
-      return res.status(400).json({ message: 'Picture is required' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'A imagem do Pokémon é obrigatória' 
+      });
     }
 
     // Gera número sequencial para novo Pokemon
@@ -191,7 +274,10 @@ app.post('/api/pokemon/create', upload.single('picture'), async (req, res) => {
     res.status(201).json(response);
   } catch (error) {
     logger.error('Error creating Pokemon:', error);
-    res.status(500).json({ message: 'Error creating Pokemon' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro ao criar Pokémon, tente novamente'
+    });
   }
 });
 
