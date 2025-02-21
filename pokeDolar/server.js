@@ -11,12 +11,34 @@ import cacheService from './src/config/cache.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { logger, requestLogger, errorLogger, logAuthEvent } from './src/config/logger.js';
 
 // Carrega variáveis de ambiente
 dotenv.config();
 
 const app = express();
+
+// Aplica RateLimiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requisições por IP
+  standardHeaders: true, // Retorna info de rate limit nos headers `RateLimit-*`
+  legacyHeaders: false, // Desabilita os headers `X-RateLimit-*`
+  // Quando limite é excedido
+  handler: (req, res) => {
+    logger.warn('Rate limit exceeded', {
+      ip: req.ip,
+      path: req.path
+    });
+    res.status(429).json({
+      message: 'Too many requests, please try again later.'
+    });
+  }
+});
+
+// Aplica o limiter globalmente para todas as rotas
+app.use(limiter);
 
 // Adiciona middleware de logging para todas as requisições
 app.use(requestLogger);
