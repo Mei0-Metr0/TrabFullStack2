@@ -218,7 +218,7 @@ app.use('/api/pokemon', authMiddleware);
 
 // Rota para criar Pokemon
 // O middleware de upload de imagens deve vim antes da de validação
-app.post('/api/pokemon/create', upload.single('picture'), [
+app.post('/api/pokemon', upload.single('picture'), [
   // Validações
   body('name')
     .trim()
@@ -282,10 +282,30 @@ app.post('/api/pokemon/create', upload.single('picture'), [
 });
 
 // Rota para listar Pokemon personalizados
-app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
+app.get('/api/pokemon', authMiddleware, async (req, res) => {
   try {
-    const customPokemon = await cacheService.getOrSet(
-      'custom_pokemon_list',
+    // Verifica se o cliente está solicitando pokémon customizados
+    const isCustom = req.query.custom === 'true';
+    
+    if (isCustom) {
+      const customPokemon = await cacheService.getOrSet(
+        'custom_pokemon_list',
+        async () => {
+          const pokemon = await Pokemon.find({}, {
+            name: 1,
+            number: 1,
+            type: 1
+          });
+          return pokemon;
+        },
+        1800 // Cache por 30 minutos
+      );
+      return res.json(customPokemon);
+    }
+    
+    // Se não for solicitado pokémon customizado, retorna todos
+    const allPokemon = await cacheService.getOrSet(
+      'pokemon_list',
       async () => {
         const pokemon = await Pokemon.find({}, {
           name: 1,
@@ -294,12 +314,12 @@ app.get('/api/pokemon/custom', authMiddleware, async (req, res) => {
         });
         return pokemon;
       },
-      1800 // Cache por 30 minutos
+      1800
     );
-    res.json(customPokemon);
+    res.json(allPokemon);
   } catch (error) {
-    logger.error('Error fetching custom Pokemon:', error);
-    res.status(500).json({ message: 'Error fetching custom Pokemon' });
+    logger.error('Error fetching Pokemon:', error);
+    res.status(500).json({ message: 'Error fetching Pokemon' });
   }
 });
 

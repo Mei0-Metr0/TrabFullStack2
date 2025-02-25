@@ -6,7 +6,7 @@ export const fetchCustomPokemon = createAsyncThunk(
   'customPokemon/fetchAll', 
   async () => {
     // Faz uma requisição HTTP para buscar os Pokémon personalizados
-    const response = await fetch('/api/pokemon/custom');
+    const response = await fetch('/api/pokemon?custom=true');
 
     if (!response.ok) throw new Error('Failed to fetch custom Pokemon');
 

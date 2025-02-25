@@ -74,7 +74,7 @@ const PokemonCreateForm = ({ isOpen, onClose }) => {
       formDataToSend.append('type', formData.type);
       formDataToSend.append('picture', formData.picture);
   
-      const response = await fetch('/api/pokemon/create', {
+      const response = await fetch('/api/pokemon', {
         method: 'POST',
         body: formDataToSend,
       });
