@@ -106,6 +106,8 @@ app.use(session({
 // Configuração CORS
 app.use(cors({
   origin: ['http://localhost:5173', 'https://trab-full-stack2.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true // Importante para sessões
 }));
 
